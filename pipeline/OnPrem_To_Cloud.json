@@ -30,7 +30,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "SqlServerSource",
-						"sqlReaderQuery": "select * from categories\nwhere updated_at between @activity('Get_New_watermark_value').output.firstRow\n and activity('Get_old_watermark_Value').output.firstRow",
+						"sqlReaderQuery": "select * from categories\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
