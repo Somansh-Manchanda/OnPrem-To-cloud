@@ -30,7 +30,10 @@
 				"typeProperties": {
 					"source": {
 						"type": "SqlServerSource",
-						"sqlReaderQuery": "select * from categories\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
+						"sqlReaderQuery": {
+							"value": "select * from categories\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
+							"type": "Expression"
+						},
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -117,6 +120,43 @@
 						"referenceName": "ds_on_prem_sql_DB",
 						"type": "DatasetReference"
 					}
+				}
+			},
+			{
+				"name": "updateWmvalue",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy_OnPrem_To_CLoud",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_write_watermark]",
+					"storedProcedureParameters": {
+						"LastModifiedTime": {
+							"value": "@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}",
+							"type": "DateTime"
+						},
+						"TableName": {
+							"value": "categories",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_az_sql_server",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],
