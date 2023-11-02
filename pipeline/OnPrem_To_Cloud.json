@@ -42,7 +42,7 @@
 								"source": {
 									"type": "SqlServerSource",
 									"sqlReaderQuery": {
-										"value": "select * from @{item().TABLE_NAME}\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
+										"value": "select * from @{item().TABLE_NAME}\nwhere @{item().WaterMark_Column} between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
 										"type": "Expression"
 									},
 									"queryTimeout": "02:00:00",
