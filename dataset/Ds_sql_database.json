@@ -5,6 +5,11 @@
 			"referenceName": "ls_az_sql_server",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"TABLE": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [
@@ -31,8 +36,11 @@
 			}
 		],
 		"typeProperties": {
-			"schema": "dbo",
-			"table": "CATEGORIES"
+			"schema": "",
+			"table": {
+				"value": "@dataset().TABLE",
+				"type": "Expression"
+			}
 		}
 	}
 }
