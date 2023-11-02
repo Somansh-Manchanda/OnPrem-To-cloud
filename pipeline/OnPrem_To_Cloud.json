@@ -3,163 +3,182 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy_OnPrem_To_CLoud",
-				"type": "Copy",
-				"dependsOn": [
-					{
-						"activity": "Get_old_watermark_Value",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					},
-					{
-						"activity": "Get_New_watermark_value",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
+				"name": "ForEachTable",
+				"type": "ForEach",
+				"dependsOn": [],
 				"userProperties": [],
 				"typeProperties": {
-					"source": {
-						"type": "SqlServerSource",
-						"sqlReaderQuery": {
-							"value": "select * from categories\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
-							"type": "Expression"
-						},
-						"queryTimeout": "02:00:00",
-						"partitionOption": "None"
+					"items": {
+						"value": "@pipeline().parameters.tableList",
+						"type": "Expression"
 					},
-					"sink": {
-						"type": "AzureSqlSink",
-						"writeBehavior": "upsert",
-						"upsertSettings": {
-							"useTempDB": true,
-							"keys": [
-								"category_id"
+					"activities": [
+						{
+							"name": "Copy_OnPrem_To_CLoud",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get_old_watermark_Value",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Get_New_watermark_value",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "select * from @{item().TABLE_NAME}\nwhere updated_at between '@{activity('Get_old_watermark_Value').output.firstRow.Watermarkvalue}'\n and '@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"writeBehavior": "upsert",
+									"upsertSettings": {
+										"useTempDB": true,
+										"keys": [
+											"category_id"
+										]
+									},
+									"sqlWriterUseTableLock": false,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_on_prem_sql_DB",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Ds_sql_database",
+									"type": "DatasetReference"
+								}
 							]
 						},
-						"sqlWriterUseTableLock": false,
-						"disableMetricsCollection": false
-					},
-					"enableStaging": false,
-					"translator": {
-						"type": "TabularTranslator",
-						"typeConversion": true,
-						"typeConversionSettings": {
-							"allowDataTruncation": true,
-							"treatBooleanAsNumber": false
-						}
-					}
-				},
-				"inputs": [
-					{
-						"referenceName": "ds_on_prem_sql_DB",
-						"type": "DatasetReference"
-					}
-				],
-				"outputs": [
-					{
-						"referenceName": "Ds_sql_database",
-						"type": "DatasetReference"
-					}
-				]
-			},
-			{
-				"name": "Get_old_watermark_Value",
-				"type": "Lookup",
-				"dependsOn": [],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"source": {
-						"type": "AzureSqlSource",
-						"sqlReaderQuery": "select Watermarkvalue from watermarktable where  TableName = 'CATEGORIES'",
-						"queryTimeout": "02:00:00",
-						"partitionOption": "None"
-					},
-					"dataset": {
-						"referenceName": "Ds_sql_database",
-						"type": "DatasetReference"
-					}
-				}
-			},
-			{
-				"name": "Get_New_watermark_value",
-				"type": "Lookup",
-				"dependsOn": [],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"source": {
-						"type": "SqlServerSource",
-						"sqlReaderQuery": "SELECT max(updated_at) as newWMvalue\nfrom categories",
-						"queryTimeout": "02:00:00",
-						"partitionOption": "None"
-					},
-					"dataset": {
-						"referenceName": "ds_on_prem_sql_DB",
-						"type": "DatasetReference"
-					}
-				}
-			},
-			{
-				"name": "updateWmvalue",
-				"type": "SqlServerStoredProcedure",
-				"dependsOn": [
-					{
-						"activity": "Copy_OnPrem_To_CLoud",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"storedProcedureName": "[dbo].[usp_write_watermark]",
-					"storedProcedureParameters": {
-						"LastModifiedTime": {
-							"value": "@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}",
-							"type": "DateTime"
+						{
+							"name": "Get_old_watermark_Value",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "select Watermarkvalue from watermarktable where  TableName = '@{item().TABLE_NAME}'",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_sql_database",
+									"type": "DatasetReference"
+								}
+							}
 						},
-						"TableName": {
-							"value": "categories",
-							"type": "String"
+						{
+							"name": "Get_New_watermark_value",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": "SELECT max(@{item().WaterMark_Column}) as newWMvalue\nfrom @{item().TABLE_NAME}",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_on_prem_sql_DB",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "updateWmvalue",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_OnPrem_To_CLoud",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_write_watermark]",
+								"storedProcedureParameters": {
+									"LastModifiedTime": {
+										"value": "@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}",
+										"type": "DateTime"
+									},
+									"TableName": {
+										"value": "categories",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_az_sql_server",
+								"type": "LinkedServiceReference"
+							}
 						}
-					}
-				},
-				"linkedServiceName": {
-					"referenceName": "ls_az_sql_server",
-					"type": "LinkedServiceReference"
+					]
 				}
 			}
 		],
+		"parameters": {
+			"tableList": {
+				"type": "array"
+			}
+		},
 		"annotations": []
 	}
 }
