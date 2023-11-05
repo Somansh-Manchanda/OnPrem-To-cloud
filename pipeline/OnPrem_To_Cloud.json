@@ -61,6 +61,7 @@
 									"disableMetricsCollection": false
 								},
 								"enableStaging": false,
+								"validateDataConsistency": false,
 								"translator": {
 									"type": "TabularTranslator",
 									"typeConversion": true,
@@ -79,7 +80,13 @@
 							"outputs": [
 								{
 									"referenceName": "Ds_sql_database",
-									"type": "DatasetReference"
+									"type": "DatasetReference",
+									"parameters": {
+										"TABLE": {
+											"value": "@item().TABLE_NAME",
+											"type": "Expression"
+										}
+									}
 								}
 							]
 						},
@@ -98,13 +105,19 @@
 							"typeProperties": {
 								"source": {
 									"type": "AzureSqlSource",
-									"sqlReaderQuery": "select Watermarkvalue from watermarktable where  TableName = '@{item().TABLE_NAME}'",
+									"sqlReaderQuery": {
+										"value": "select Watermarkvalue from watermarktable where  TableName = '@{item().TABLE_NAME}'",
+										"type": "Expression"
+									},
 									"queryTimeout": "02:00:00",
 									"partitionOption": "None"
 								},
 								"dataset": {
 									"referenceName": "Ds_sql_database",
-									"type": "DatasetReference"
+									"type": "DatasetReference",
+									"parameters": {
+										"TABLE": "item().TABLE_NAME"
+									}
 								}
 							}
 						},
@@ -123,7 +136,10 @@
 							"typeProperties": {
 								"source": {
 									"type": "SqlServerSource",
-									"sqlReaderQuery": "SELECT max(@{item().WaterMark_Column}) as newWMvalue\nfrom @{item().TABLE_NAME}",
+									"sqlReaderQuery": {
+										"value": "SELECT max(@{item().WaterMark_Column}) as newWMvalue\nfrom @{item().TABLE_NAME}",
+										"type": "Expression"
+									},
 									"queryTimeout": "02:00:00",
 									"partitionOption": "None"
 								},
@@ -156,7 +172,10 @@
 								"storedProcedureName": "[dbo].[usp_write_watermark]",
 								"storedProcedureParameters": {
 									"LastModifiedTime": {
-										"value": "@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}",
+										"value": {
+											"value": "@{activity('Get_New_watermark_value').output.firstRow.newWMvalue}",
+											"type": "Expression"
+										},
 										"type": "DateTime"
 									},
 									"TableName": {
